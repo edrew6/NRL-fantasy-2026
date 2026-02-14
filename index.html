@@ -16,7 +16,10 @@
   --text: rgba(255,255,255,.92);
   --muted: rgba(255,255,255,.72);
   --accent: #7CFFB7;
+  --warn: #ffcf7c;
+  --bad:  #ff7c7c;
 }
+
 *{box-sizing:border-box}
 body{
   margin:0;
@@ -27,25 +30,124 @@ body{
     radial-gradient(1200px 700px at 50% 0%, rgba(124,255,183,.18), transparent 60%),
     radial-gradient(900px 500px at 50% 20%, rgba(255,255,255,.08), transparent 60%),
     linear-gradient(180deg, var(--bgTop), var(--bgMid) 45%, var(--bgBot));
+  -webkit-user-select:none;
   user-select:none;
 }
-.wrap{max-width:980px;margin:auto;padding:22px 16px 60px}
-.hero{border-radius:24px;overflow:hidden;background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow)}
+.wrap{max-width:980px;margin:auto;padding:22px 16px 60px;}
+.hero{
+  border-radius:24px; overflow:hidden;
+  background:var(--card);
+  border:1px solid var(--line);
+  box-shadow:var(--shadow);
+}
 .hero img{width:100%;display:block}
-.heroText{text-align:center;padding:18px 16px 20px;background:linear-gradient(180deg, rgba(0,0,0,.18), rgba(0,0,0,.35))}
-h1{margin:0 0 8px;font-size:clamp(28px,6vw,42px);font-weight:950}
-.sub{margin:0;color:var(--muted);font-weight:750}
-.meta{margin:18px auto 10px;max-width:760px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.metaBox{padding:14px;border-radius:16px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.10);text-align:center;font-weight:850}
-.metaBox strong{display:block;font-size:20px;margin-top:6px;color:var(--accent)}
-.section{text-align:center;margin:22px 0 10px;font-weight:950;letter-spacing:.7px}
-.board{max-width:860px;margin:auto;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.20)}
-.row{display:flex;align-items:center;gap:14px;padding:14px 16px;border-top:1px solid rgba(255,255,255,.08)}
+.heroText{
+  text-align:center;
+  padding:18px 16px 20px;
+  background:linear-gradient(180deg, rgba(0,0,0,.18), rgba(0,0,0,.35));
+}
+h1{
+  margin:0 0 8px;
+  font-size:clamp(28px,6vw,42px);
+  font-weight:950;
+  letter-spacing:.7px;
+}
+.sub{margin:0 0 6px; color:var(--muted); font-weight:750;}
+.meta{
+  margin:18px auto 10px;
+  max-width:760px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+.metaBox{
+  padding:14px 12px;
+  border-radius:16px;
+  background:rgba(0,0,0,.25);
+  border:1px solid rgba(255,255,255,.10);
+  text-align:center;
+  font-weight:850;
+}
+.metaBox strong{
+  display:block;
+  font-size:20px;
+  margin-top:6px;
+  letter-spacing:.6px;
+  color:var(--accent);
+}
+.badgeWrap{
+  max-width:760px;
+  margin:10px auto 0;
+  display:flex;
+  justify-content:center;
+}
+.badge{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:10px 12px;
+  border-radius:999px;
+  background:rgba(0,0,0,.25);
+  border:1px solid rgba(255,255,255,.12);
+  font-weight:850;
+  color:rgba(255,255,255,.78);
+}
+.badge b{ color:var(--accent); letter-spacing:.3px; }
+.badge.warn b{ color:var(--warn); }
+.badge.bad  b{ color:var(--bad); }
+
+.section{
+  text-align:center;
+  margin:22px 0 10px;
+  font-weight:950;
+  letter-spacing:.7px;
+  text-transform:uppercase;
+}
+.board{
+  max-width:860px;
+  margin:auto;
+  border-radius:20px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(0,0,0,.20);
+  box-shadow:0 20px 55px rgba(0,0,0,.45);
+}
+.row{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:14px 16px;
+  border-top:1px solid rgba(255,255,255,.08);
+  background:rgba(0,0,0,.18);
+  font-weight:850;
+}
 .row:first-child{border-top:none}
-.num{width:44px;height:44px;display:grid;place-items:center;border-radius:12px;background:rgba(124,255,183,.14);border:1px solid rgba(124,255,183,.24);color:var(--accent);font-weight:950}
-.name.hidden{opacity:.5}
+.num{
+  width:44px;height:44px;
+  display:grid;place-items:center;
+  border-radius:12px;
+  background:rgba(124,255,183,.14);
+  border:1px solid rgba(124,255,183,.24);
+  color:var(--accent);
+  font-weight:950;
+}
+.name.hidden{opacity:.55}
 .name.reveal{opacity:1}
-.footer{text-align:center;margin-top:12px;color:rgba(255,255,255,.60);font-size:13px}
+.footer{
+  text-align:center;
+  margin-top:12px;
+  color:rgba(255,255,255,.60);
+  font-size:13px;
+}
+.smallMeta{
+  text-align:center;
+  margin-top:10px;
+  font-size:12px;
+  color:rgba(255,255,255,.60);
+}
+.smallMeta code{ color:rgba(255,255,255,.82); }
+
+#randomnessRow{ display:none; } /* hidden by default */
 </style>
 </head>
 
@@ -56,7 +158,7 @@ h1{margin:0 0 8px;font-size:clamp(28px,6vw,42px);font-weight:950}
     <img src="banner.jpg" alt="Spoon Bowl 2026">
     <div class="heroText">
       <h1>SPOON BOWL 2026 DRAFT</h1>
-      <p class="sub">Randomized draft order • Revealed at 4:30pm Brisbane</p>
+      <p class="sub">Provably-fair randomized order • Revealed one pick at a time</p>
     </div>
   </div>
 
@@ -65,15 +167,26 @@ h1{margin:0 0 8px;font-size:clamp(28px,6vw,42px);font-weight:950}
     <div class="metaBox">Countdown<strong id="count">--:--:--</strong></div>
   </div>
 
+  <div class="badgeWrap">
+    <div class="badge warn" id="fairBadge">Fairness: <b>Pending</b> <span id="fairHint">• waiting for reveal</span></div>
+  </div>
+
+  <!-- Hidden proof (only visible with ?debug=1) -->
+  <div class="meta" id="randomnessRow">
+    <div class="metaBox">Randomness Proof (drand round)<strong id="drandRound">Pending</strong></div>
+    <div class="metaBox">Randomness Value<strong id="drandValue">Pending</strong></div>
+  </div>
+
   <div class="section">Draft Order</div>
   <div class="board" id="board"></div>
 
-  <div class="footer">Nothing reveals before 4:30pm Brisbane time</div>
+  <div class="footer">Nothing reveals until 4:30pm Brisbane time • Order derived from public drand randomness</div>
+  <div class="smallMeta" id="seedMeta"></div>
 
 </div>
 
 <script>
-/* ================== TEAMS ================== */
+/* ===================== EDIT THESE ONLY ===================== */
 const teams = [
   "Hakuna Mata'utia",
   "Spooners6",
@@ -87,20 +200,27 @@ const teams = [
   "irhysistable"
 ];
 
-const INTERVAL_MS = 2000;
+const INTERVAL_MS = 2000;                 // reveal one pick every 2s
+const DRAND_API = "https://api.drand.sh"; // public randomness beacon
+/* =========================================================== */
 
-/* ========== BUILD BOARD (ALL HIDDEN) ========== */
+const debug = new URLSearchParams(location.search).get("debug") === "1";
+if(debug){
+  document.getElementById("randomnessRow").style.display = "grid";
+}
+
+/* Build board (all hidden initially) */
 const board = document.getElementById("board");
 const nameEls = [];
-teams.forEach((_,i)=>{
+for(let i=0;i<teams.length;i++){
   const r=document.createElement("div");
   r.className="row";
   r.innerHTML=`<div class="num">${i+1}</div><div class="name hidden">Hidden</div>`;
   board.appendChild(r);
   nameEls.push(r.querySelector(".name"));
-});
+}
 
-/* ========== CORRECT BRISBANE TIME ========== */
+/* --- Brisbane time: next Sunday 4:30pm, computed in Australia/Brisbane --- */
 function nextSunday430BrisbaneUtcMs(){
   const fmt = new Intl.DateTimeFormat("en-AU", {
     timeZone: "Australia/Brisbane",
@@ -117,64 +237,172 @@ function nextSunday430BrisbaneUtcMs(){
   const dowMap={Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6};
   let days = (7 - dowMap[parts.weekday]) % 7;
 
-  if(days===0 && (parts.hour>16 || (parts.hour==16 && parts.minute>=30))) days=7;
+  // If it's already Sunday and past 16:30 Brisbane, jump a week
+  const h = Number(parts.hour), m = Number(parts.minute);
+  if(days===0 && (h>16 || (h===16 && m>=30))) days = 7;
 
-  const base = new Date(Date.UTC(parts.year, parts.month-1, parts.day));
+  // Create UTC date for the Brisbane calendar date, then add days
+  const base = new Date(Date.UTC(Number(parts.year), Number(parts.month)-1, Number(parts.day)));
   base.setUTCDate(base.getUTCDate()+days);
 
-  return Date.UTC(
-    base.getUTCFullYear(),
-    base.getUTCMonth(),
-    base.getUTCDate(),
-    6,30,0,0   // 16:30 Brisbane = 06:30 UTC
-  );
+  // Brisbane is UTC+10, so 16:30 Brisbane == 06:30 UTC
+  return Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), base.getUTCDate(), 6, 30, 0, 0);
 }
-
 const revealUtcMs = nextSunday430BrisbaneUtcMs();
 
-/* ========== SHUFFLE (ONCE) ========== */
-const order = teams
-  .map(v=>({v, r:crypto.getRandomValues(new Uint32Array(1))[0]}))
-  .sort((a,b)=>a.r-b.r)
-  .map(x=>x.v);
+/* --- Provably-fair deterministic shuffle from drand randomness --- */
+function hexToU8(hex){
+  const clean = hex.replace(/^0x/,"");
+  const out = new Uint8Array(clean.length/2);
+  for(let i=0;i<out.length;i++){
+    out[i] = parseInt(clean.slice(i*2,i*2+2), 16);
+  }
+  return out;
+}
+function concatU8(a,b){
+  const out = new Uint8Array(a.length+b.length);
+  out.set(a,0); out.set(b,a.length);
+  return out;
+}
+async function hmacSha256(keyBytes, msgBytes){
+  const key = await crypto.subtle.importKey(
+    "raw", keyBytes, { name:"HMAC", hash:"SHA-256" }, false, ["sign"]
+  );
+  return new Uint8Array(await crypto.subtle.sign("HMAC", key, msgBytes));
+}
+async function fisherYatesDeterministic(arr, seedBytes){
+  const a = arr.slice();
+  let counter = 0;
+  let pool = new Uint8Array(0);
 
-/* ========== RENDER LOGIC ========== */
-let started=false;
-let startTime=0;
+  async function nextUint32(){
+    while(pool.length < 4){
+      const ctr = new Uint8Array(8);
+      new DataView(ctr.buffer).setBigUint64(0, BigInt(counter++), false);
+      pool = concatU8(pool, await hmacSha256(seedBytes, ctr));
+    }
+    const x = new DataView(pool.buffer, pool.byteOffset, pool.byteLength).getUint32(0, false);
+    pool = pool.slice(4);
+    return x >>> 0;
+  }
+
+  for(let i=a.length-1;i>0;i--){
+    const max = 0xFFFFFFFF;
+    const limit = max - (max % (i+1));
+    let r;
+    do { r = await nextUint32(); } while(r > limit);
+    const j = r % (i+1);
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+async function fetchJson(url){
+  const res = await fetch(url, { cache:"no-store" });
+  if(!res.ok) throw new Error(`Fetch failed ${res.status} for ${url}`);
+  return res.json();
+}
+function roundAtOrAfterTime(genesisTimeSec, periodSec, targetUtcMs){
+  const targetSec = Math.floor(targetUtcMs/1000);
+  if(targetSec <= genesisTimeSec) return 1;
+  const offset = targetSec - genesisTimeSec;
+  return Math.floor((offset + periodSec - 1)/periodSec) + 1;
+}
+
+/* --- UI helpers --- */
+const fairBadge = document.getElementById("fairBadge");
+const fairHint = document.getElementById("fairHint");
+const seedMeta = document.getElementById("seedMeta");
+
+function setBadge(state, text, hint){
+  fairBadge.classList.remove("warn","bad");
+  if(state==="pending") fairBadge.classList.add("warn");
+  if(state==="bad") fairBadge.classList.add("bad");
+  fairBadge.querySelector("b").textContent = text;
+  fairHint.textContent = hint ? `• ${hint}` : "";
+}
+
+function setHiddenProof(round, randomnessHex){
+  document.getElementById("drandRound").textContent = String(round);
+  document.getElementById("drandValue").textContent = randomnessHex.slice(0,12) + "…";
+}
+
+/* --- Reveal flow --- */
+let order = [];
+let started = false;
+let startTime = 0;
 
 function render(){
-  if(Date.now()<revealUtcMs || !started) return;
+  const now = Date.now();
+  if(now < revealUtcMs) return;       // hard stop before 4:30 Brisbane
+  if(!started || !order.length) return;
 
-  const elapsed = Date.now() - startTime;
-  const shown = Math.min(order.length, Math.floor(elapsed/INTERVAL_MS));
+  const elapsed = now - startTime;
+
+  // First reveal happens at 4:30:02 (clean). If you want it at 4:30:00, change to +1.
+  const shown = Math.min(order.length, Math.floor(elapsed / INTERVAL_MS));
 
   for(let i=0;i<shown;i++){
-    nameEls[i].textContent=order[i];
+    nameEls[i].textContent = order[i];
     nameEls[i].classList.remove("hidden");
     nameEls[i].classList.add("reveal");
   }
 }
 
-/* ========== COUNTDOWN ========== */
+async function startReveal(){
+  try{
+    setBadge("pending","Fetching…","getting public randomness");
+
+    const info = await fetchJson(`${DRAND_API}/info`);
+    const genesisTimeSec = Number(info.genesis_time);
+    const periodSec = Number(info.period);
+
+    const round = roundAtOrAfterTime(genesisTimeSec, periodSec, revealUtcMs);
+    const beacon = await fetchJson(`${DRAND_API}/public/${round}`);
+
+    const randomnessHex = beacon.randomness;
+    setHiddenProof(beacon.round, randomnessHex);
+
+    order = await fisherYatesDeterministic(teams, hexToU8(randomnessHex));
+
+    setBadge("ok","Verified ✓",`drand round ${beacon.round}`);
+    seedMeta.innerHTML =
+      `Proof: drand round <code>${beacon.round}</code> • ` +
+      `randomness <code>${randomnessHex.slice(0,12)}…</code>`;
+
+    started = true;
+    startTime = revealUtcMs; // anchor to EXACT 4:30 Brisbane
+    render();
+  }catch(e){
+    console.error(e);
+    setBadge("bad","Error","couldn’t fetch drand");
+    seedMeta.textContent = "Could not fetch public randomness. Try reloading.";
+  }
+}
+
+/* --- Countdown loop --- */
 function pad(n){return String(n).padStart(2,"0")}
-const count=document.getElementById("count");
+const count = document.getElementById("count");
 
 setInterval(()=>{
   const diff = revealUtcMs - Date.now();
-  if(diff<=0){
-    count.textContent="00:00:00";
-    if(!started){
-      started=true;
-      startTime=revealUtcMs;
-    }
+  if(diff <= 0){
+    count.textContent = "00:00:00";
+    if(!started) startReveal();
     render();
     return;
   }
   const h=Math.floor(diff/36e5);
   const m=Math.floor(diff%36e5/6e4);
   const s=Math.floor(diff%6e4/1e3);
-  count.textContent=`${pad(h)}:${pad(m)}:${pad(s)}`;
-},500);
+  count.textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
+}, 500);
+
+/* If opened after reveal time */
+if(Date.now() >= revealUtcMs){
+  count.textContent = "00:00:00";
+  startReveal();
+}
 </script>
 </body>
 </html>
