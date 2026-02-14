@@ -29,6 +29,7 @@ body{
     radial-gradient(1200px 700px at 50% 0%, rgba(124,255,183,.18), transparent 60%),
     radial-gradient(900px 500px at 50% 20%, rgba(255,255,255,.08), transparent 60%),
     linear-gradient(180deg, var(--bgTop), var(--bgMid) 45%, var(--bgBot));
+  -webkit-user-select:none;
   user-select:none;
 }
 
@@ -62,14 +63,39 @@ h1{
 }
 
 .sub{
-  margin:0;
+  margin:0 0 12px;
   color:var(--muted);
   font-weight:750;
 }
 
+.meta{
+  margin:18px auto 10px;
+  max-width:760px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+
+.metaBox{
+  padding:14px 12px;
+  border-radius:16px;
+  background:rgba(0,0,0,.25);
+  border:1px solid rgba(255,255,255,.10);
+  text-align:center;
+  font-weight:850;
+}
+
+.metaBox strong{
+  display:block;
+  font-size:20px;
+  margin-top:6px;
+  letter-spacing:.6px;
+  color:var(--accent);
+}
+
 .section{
   text-align:center;
-  margin:26px 0 12px;
+  margin:22px 0 10px;
   font-weight:950;
   letter-spacing:.7px;
   text-transform:uppercase;
@@ -111,7 +137,7 @@ h1{
 
 .footer{
   text-align:center;
-  margin-top:14px;
+  margin-top:12px;
   color:rgba(255,255,255,.60);
   font-size:13px;
 }
@@ -129,19 +155,20 @@ h1{
     </div>
   </div>
 
+  <div class="meta">
+    <div class="metaBox">Reveal Time (AEST)<strong>Sunday 4:30 PM</strong></div>
+    <div class="metaBox">Countdown<strong id="count">--:--:--</strong></div>
+  </div>
+
   <div class="section">Draft Order</div>
   <div class="board" id="board"></div>
 
-  <div class="footer">
-    Reveal begins Sunday 4:30pm (AEST) • One pick every 2 seconds
-  </div>
+  <div class="footer">Randomized draft order • Revealed one pick at a time</div>
 </div>
 
 <script>
-/* ===============================
-   CONFIG
-================================ */
-const TEAMS = [
+/* TEAM NAMES — PLAIN TEXT */
+const teams = [
   "Hakuna Mata'utia",
   "Spooners6",
   "CSFC91",
@@ -154,115 +181,86 @@ const TEAMS = [
   "irhysistable"
 ];
 
-const ORDER_KEY = "sb26_final_order";
-const START_KEY = "sb26_reveal_start";
-const INTERVAL = 2000;
-
-/* ===============================
-   NEXT SUNDAY 4:30PM AEST
-================================ */
-function nextSunday430AEST(){
-  const now = new Date();
-
-  // Convert now → AEST (UTC+10)
-  const aestNow = new Date(now.getTime() + (10 * 60 * 60 * 1000));
-
-  const target = new Date(aestNow);
-  target.setSeconds(0,0);
-  target.setHours(16,30,0,0);
-
-  while(target.getDay() !== 0){
-    target.setDate(target.getDate() + 1);
-  }
-
-  if(target <= aestNow){
-    target.setDate(target.getDate() + 7);
-  }
-
-  // Convert back to local time
-  return new Date(target.getTime() - (10 * 60 * 60 * 1000));
+/* build board */
+const board=document.getElementById("board");
+const nameEls=[];
+for(let i=0;i<teams.length;i++){
+  const r=document.createElement("div");
+  r.className="row";
+  r.innerHTML=`<div class="num">${i+1}</div><div class="name hidden">Hidden</div>`;
+  board.appendChild(r);
+  nameEls.push(r.querySelector(".name"));
 }
 
-const REVEAL_TIME = nextSunday430AEST();
+/* next Sunday 4:30pm */
+function nextSunday430(){
+  const x=new Date();
+  x.setSeconds(0,0);
+  x.setHours(16,30,0,0);
+  while(x.getDay()!==0) x.setDate(x.getDate()+1);
+  if(x.getTime()<Date.now()) x.setDate(x.getDate()+7);
+  return x;
+}
+const revealAt=nextSunday430();
 
-/* ===============================
-   SHUFFLE (FAIR)
-================================ */
-function shuffle(arr){
-  for(let i=arr.length-1;i>0;i--){
-    const j = Math.floor(Math.random()*(i+1));
-    [arr[i],arr[j]] = [arr[j],arr[i]];
+/* randomized order (stored so refresh doesn’t reroll) */
+const ORDER_KEY="sb26_order_final_plain";
+function shuffle(a){
+  for(let i=a.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
   }
 }
-
-/* ===============================
-   GET OR CREATE ORDER (LOCKED)
-================================ */
-function getFinalOrder(){
-  const saved = localStorage.getItem(ORDER_KEY);
+function buildOrder(){
+  const saved=localStorage.getItem(ORDER_KEY);
   if(saved){
     try{
-      const parsed = JSON.parse(saved);
-      if(Array.isArray(parsed) && parsed.length === TEAMS.length){
-        return parsed;
-      }
+      const p=JSON.parse(saved);
+      if(Array.isArray(p)&&p.length===teams.length) return p;
     }catch(e){}
   }
-  const fresh = [...TEAMS];
-  shuffle(fresh);
-  localStorage.setItem(ORDER_KEY, JSON.stringify(fresh));
-  return fresh;
+  const copy=[...teams];
+  shuffle(copy);
+  localStorage.setItem(ORDER_KEY,JSON.stringify(copy));
+  return copy;
 }
+const order=buildOrder();
 
-const FINAL_ORDER = getFinalOrder();
+/* reveal pacing */
+const INTERVAL=2000;
+const START_KEY="sb26_start_final_plain";
+function getStart(){return Number(localStorage.getItem(START_KEY)||0)}
+function setStart(t){localStorage.setItem(START_KEY,String(t))}
 
-/* ===============================
-   BUILD BOARD
-================================ */
-const board = document.getElementById("board");
-const nameEls = [];
-
-FINAL_ORDER.forEach((_, i)=>{
-  const row = document.createElement("div");
-  row.className = "row";
-  row.innerHTML = `
-    <div class="num">${i+1}</div>
-    <div class="name hidden">Hidden</div>
-  `;
-  board.appendChild(row);
-  nameEls.push(row.querySelector(".name"));
-});
-
-/* ===============================
-   REVEAL CONTROL
-================================ */
-function maybeStartReveal(){
-  if(Date.now() >= REVEAL_TIME.getTime()){
-    if(!localStorage.getItem(START_KEY)){
-      localStorage.setItem(START_KEY, Date.now());
+function render(){
+  const start=getStart();
+  if(!start) return;
+  const shown=Math.min(order.length, Math.floor((Date.now()-start)/INTERVAL)+1);
+  for(let i=0;i<order.length;i++){
+    if(i<shown){
+      nameEls[i].textContent=order[i];
+      nameEls[i].classList.remove("hidden");
+      nameEls[i].classList.add("reveal");
     }
   }
 }
 
-function render(){
-  maybeStartReveal();
+function pad(n){return String(n).padStart(2,"0")}
+const count=document.getElementById("count");
 
-  const start = Number(localStorage.getItem(START_KEY));
-  if(!start) return;
-
-  const shown = Math.min(
-    FINAL_ORDER.length,
-    Math.floor((Date.now() - start) / INTERVAL) + 1
-  );
-
-  for(let i=0;i<shown;i++){
-    nameEls[i].textContent = FINAL_ORDER[i];
-    nameEls[i].classList.remove("hidden");
-    nameEls[i].classList.add("reveal");
+setInterval(()=>{
+  const diff=revealAt-Date.now();
+  if(diff<=0){
+    count.textContent="00:00:00";
+    if(!getStart()) setStart(Date.now());
+    render();
+    return;
   }
-}
-
-setInterval(render, 500);
+  const h=Math.floor(diff/36e5);
+  const m=Math.floor(diff%36e5/6e4);
+  const s=Math.floor(diff%6e4/1e3);
+  count.textContent=`${pad(h)}:${pad(m)}:${pad(s)}`;
+},500);
 </script>
 </body>
 </html>
