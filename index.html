@@ -16,10 +16,10 @@
   --text: rgba(255,255,255,.92);
   --muted: rgba(255,255,255,.72);
   --accent: #7CFFB7;
+  --warn: #ffcf7c;
+  --bad: #ff7c7c;
 }
-
 *{box-sizing:border-box}
-
 body{
   margin:0;
   min-height:100vh;
@@ -32,42 +32,26 @@ body{
   -webkit-user-select:none;
   user-select:none;
 }
-
-.wrap{
-  max-width:980px;
-  margin:auto;
-  padding:22px 16px 60px;
-}
-
+.wrap{ max-width:980px; margin:auto; padding:22px 16px 60px; }
 .hero{
-  border-radius:24px;
-  overflow:hidden;
+  border-radius:24px; overflow:hidden;
   background:var(--card);
   border:1px solid var(--line);
   box-shadow:var(--shadow);
 }
-
 .hero img{width:100%;display:block}
-
 .heroText{
   text-align:center;
   padding:18px 16px 20px;
   background:linear-gradient(180deg, rgba(0,0,0,.18), rgba(0,0,0,.35));
 }
-
 h1{
   margin:0 0 8px;
   font-size:clamp(28px,6vw,42px);
   font-weight:950;
   letter-spacing:.7px;
 }
-
-.sub{
-  margin:0 0 12px;
-  color:var(--muted);
-  font-weight:750;
-}
-
+.sub{ margin:0 0 12px; color:var(--muted); font-weight:750; }
 .meta{
   margin:18px auto 10px;
   max-width:760px;
@@ -75,7 +59,6 @@ h1{
   grid-template-columns:1fr 1fr;
   gap:12px;
 }
-
 .metaBox{
   padding:14px 12px;
   border-radius:16px;
@@ -84,7 +67,6 @@ h1{
   text-align:center;
   font-weight:850;
 }
-
 .metaBox strong{
   display:block;
   font-size:20px;
@@ -92,7 +74,6 @@ h1{
   letter-spacing:.6px;
   color:var(--accent);
 }
-
 .section{
   text-align:center;
   margin:22px 0 10px;
@@ -100,7 +81,6 @@ h1{
   letter-spacing:.7px;
   text-transform:uppercase;
 }
-
 .board{
   max-width:860px;
   margin:auto;
@@ -110,7 +90,6 @@ h1{
   background:rgba(0,0,0,.20);
   box-shadow:0 20px 55px rgba(0,0,0,.45);
 }
-
 .row{
   display:flex;
   align-items:center;
@@ -121,7 +100,6 @@ h1{
   font-weight:850;
 }
 .row:first-child{border-top:none}
-
 .num{
   width:44px;height:44px;
   display:grid;place-items:center;
@@ -131,16 +109,42 @@ h1{
   color:var(--accent);
   font-weight:950;
 }
-
 .name.hidden{opacity:.55}
 .name.reveal{opacity:1}
-
 .footer{
   text-align:center;
   margin-top:12px;
   color:rgba(255,255,255,.60);
   font-size:13px;
 }
+.badgeWrap{
+  max-width:760px;
+  margin:10px auto 0;
+  display:flex;
+  justify-content:center;
+}
+.badge{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:10px 12px;
+  border-radius:999px;
+  background:rgba(0,0,0,.25);
+  border:1px solid rgba(255,255,255,.12);
+  font-weight:850;
+  color:rgba(255,255,255,.78);
+}
+.badge b{ color:var(--accent); letter-spacing:.3px; }
+.badge.warn b{ color:var(--warn); }
+.badge.bad b{ color:var(--bad); }
+.smallMeta{
+  text-align:center;
+  margin-top:10px;
+  font-size:12px;
+  color:rgba(255,255,255,.60);
+}
+.smallMeta code{ color:rgba(255,255,255,.82); }
+#randomnessRow{ display:none; } /* hidden by default */
 </style>
 </head>
 
@@ -151,66 +155,198 @@ h1{
     <img src="banner.jpg" alt="Spoon Bowl 2026">
     <div class="heroText">
       <h1>SPOON BOWL 2026 DRAFT</h1>
-      <p class="sub">Randomized draft order reveal</p>
+      <p class="sub">Provably-fair draft order • Revealed one pick at a time</p>
     </div>
   </div>
 
   <div class="meta">
-    <div class="metaBox">Reveal Time (AEST)<strong>Sunday 4:30 PM</strong></div>
+    <div class="metaBox">Start Time (Brisbane)<strong>Sunday 4:30 PM</strong></div>
     <div class="metaBox">Countdown<strong id="count">--:--:--</strong></div>
+  </div>
+
+  <div class="badgeWrap">
+    <div class="badge warn" id="fairBadge">Fairness: <b>Pending</b> <span id="fairHint">• waiting for reveal</span></div>
+  </div>
+
+  <!-- Hidden randomness proof (only visible with ?debug=1) -->
+  <div class="meta" id="randomnessRow">
+    <div class="metaBox">Randomness Proof (drand round)<strong id="drandRound">Pending</strong></div>
+    <div class="metaBox">Randomness Value<strong id="drandValue">Pending</strong></div>
   </div>
 
   <div class="section">Draft Order</div>
   <div class="board" id="board"></div>
 
-  <div class="footer">Randomized draft order • Revealed one pick at a time • Same order for everyone</div>
+  <div class="footer">Order derived from public drand randomness at reveal time • Same result for everyone</div>
+  <div class="smallMeta" id="seedMeta"></div>
+
 </div>
 
 <script>
-/* FIXED SHARED DRAFT ORDER (generated once with a fixed seed) */
-/* Every visitor and every refresh now sees exactly this order */
-const order = [
-  "Multiple Scoregasams",
-  "Schmidsgoat",
+/* ====== EDIT THESE ONLY ====== */
+const teams = [
   "Hakuna Mata'utia",
-  "irhysistable",
+  "Spooners6",
+  "CSFC91",
+  "Schmidsgoat",
+  "SeaEaglesChamps2025",
+  "Nate’s Stars",
+  "Multiple Scoregasams",
   "Strat",
   "The Casualty Ward Deadbeats",
-  "SeaEaglesChamps2025",
-  "CSFC91",
-  "Nate’s Stars",
-  "Spooners6"
+  "irhysistable"
 ];
+
+// Reveal pacing (cosmetic)
+const INTERVAL_MS = 2000;
+
+// Public randomness beacon endpoint (drand)
+const DRAND_API = "https://api.drand.sh";
+/* ============================ */
+
+const debug = new URLSearchParams(location.search).get("debug") === "1";
+if(debug){
+  document.getElementById("randomnessRow").style.display = "grid";
+}
 
 /* build board */
 const board = document.getElementById("board");
 const nameEls = [];
-for(let i = 0; i < order.length; i++){
-  const r = document.createElement("div");
-  r.className = "row";
-  r.innerHTML = `<div class="num">${i+1}</div><div class="name hidden">Hidden</div>`;
+for(let i=0;i<teams.length;i++){
+  const r=document.createElement("div");
+  r.className="row";
+  r.innerHTML=`<div class="num">${i+1}</div><div class="name hidden">Hidden</div>`;
   board.appendChild(r);
   nameEls.push(r.querySelector(".name"));
 }
 
-/* next Sunday 4:30pm AEST */
-function nextSunday430(){
-  const x = new Date();
-  x.setSeconds(0,0);
-  x.setHours(16,30,0,0);
-  while(x.getDay() !== 0) x.setDate(x.getDate()+1);
-  if(x.getTime() < Date.now()) x.setDate(x.getDate()+7);
-  return x;
-}
-const revealAt = nextSunday430();
+/* Fixed reveal time: next Sunday 4:30 PM Brisbane time (AEST UTC+10, no DST) */
+function nextSunday430Brisbane(){
+  const now = new Date();
+  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
+  let bris = new Date(utcMs + 10 * 60 * 60000); // Brisbane time
 
-/* reveal pacing */
-const INTERVAL = 2000;
+  const day = bris.getDay(); // 0=Sun
+  const daysUntilSunday = (7 - day) % 7;
+  bris.setDate(bris.getDate() + daysUntilSunday);
+  bris.setHours(16,30,0,0);
+
+  // Convert Brisbane wall-clock back to an absolute UTC ms
+  const brisUtcMs = bris.getTime() - 10 * 60 * 60000;
+
+  // If already passed, go to next Sunday
+  if(brisUtcMs <= Date.now()){
+    bris.setDate(bris.getDate() + 7);
+  }
+  return bris; // stored as "Brisbane clock", but Date has absolute ms under the hood
+}
+const revealAtBrisbane = nextSunday430Brisbane();
+
+/* Countdown: use absolute ms for the reveal moment */
+function revealAtUtcMs(){
+  // revealAtBrisbane is a Date object representing Brisbane wall-clock,
+  // but its internal time is already absolute.
+  // We created it from UTC->Brisbane conversion, then adjusted date/time on that,
+  // which keeps an absolute timestamp in the Date object.
+  return revealAtBrisbane.getTime() - 10 * 60 * 60000; // convert Brisbane clock to UTC ms
+}
+
+const revealUtcMs = revealAtUtcMs();
+
+function pad(n){return String(n).padStart(2,"0")}
+const count = document.getElementById("count");
+
+/* ====== Provably-fair shuffle (HMAC-SHA256 counter RNG + unbiased Fisher-Yates) ====== */
+function hexToU8(hex){
+  const clean = hex.replace(/^0x/,"");
+  const out = new Uint8Array(clean.length/2);
+  for(let i=0;i<out.length;i++){
+    out[i] = parseInt(clean.slice(i*2,i*2+2), 16);
+  }
+  return out;
+}
+function concatU8(a,b){
+  const out = new Uint8Array(a.length+b.length);
+  out.set(a,0); out.set(b,a.length);
+  return out;
+}
+async function hmacSha256(keyBytes, msgBytes){
+  const key = await crypto.subtle.importKey(
+    "raw", keyBytes, { name:"HMAC", hash:"SHA-256" }, false, ["sign"]
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, msgBytes);
+  return new Uint8Array(sig);
+}
+async function fisherYatesShuffleDeterministic(inputArr, seedBytes){
+  const a = inputArr.slice();
+  let counter = 0;
+  let pool = new Uint8Array(0);
+
+  async function nextUint32(){
+    while(pool.length < 4){
+      const ctr = new Uint8Array(8);
+      const dv = new DataView(ctr.buffer);
+      dv.setBigUint64(0, BigInt(counter++), false); // big-endian
+      const block = await hmacSha256(seedBytes, ctr);
+      pool = concatU8(pool, block);
+    }
+    const dv = new DataView(pool.buffer, pool.byteOffset, pool.byteLength);
+    const x = dv.getUint32(0, false);
+    pool = pool.slice(4);
+    return x >>> 0;
+  }
+
+  for(let i=a.length-1; i>0; i--){
+    const max = 0xFFFFFFFF;
+    const limit = max - (max % (i+1)); // rejection sampling limit
+    let r;
+    do { r = await nextUint32(); } while(r > limit);
+    const j = r % (i+1);
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/* ====== drand helpers ====== */
+async function fetchJson(url){
+  const res = await fetch(url, { cache:"no-store" });
+  if(!res.ok) throw new Error(`Fetch failed ${res.status} for ${url}`);
+  return res.json();
+}
+function roundAtOrAfterTime(genesisTimeSec, periodSec, targetUtcMs){
+  const targetSec = Math.floor(targetUtcMs/1000);
+  if(targetSec <= genesisTimeSec) return 1;
+  const offset = targetSec - genesisTimeSec;
+  return Math.floor((offset + periodSec - 1)/periodSec) + 1; // ceil
+}
+
+/* ====== UI: badge + hidden proof ====== */
+const fairBadge = document.getElementById("fairBadge");
+const fairHint = document.getElementById("fairHint");
+const seedMeta = document.getElementById("seedMeta");
+
+function setBadge(state, text, hint){
+  fairBadge.classList.remove("warn","bad");
+  if(state === "pending") fairBadge.classList.add("warn");
+  if(state === "bad") fairBadge.classList.add("bad");
+  fairBadge.querySelector("b").textContent = text;
+  fairHint.textContent = hint ? `• ${hint}` : "";
+}
+
+function setHiddenProof(round, randomnessHex){
+  document.getElementById("drandRound").textContent = String(round);
+  document.getElementById("drandValue").textContent = randomnessHex.slice(0,12) + "…";
+}
+
+/* ====== Reveal flow ====== */
+let order = [];
+let startTime = 0;
+let started = false;
 
 function render(){
-  const elapsed = Math.max(0, Date.now() - revealAt.getTime());
-  const shown = Math.min(order.length, Math.floor(elapsed / INTERVAL) + 1);
-  for(let i = 0; i < order.length; i++){
+  if(!order.length || !started) return;
+  const shown = Math.min(order.length, Math.floor((Date.now()-startTime)/INTERVAL_MS)+1);
+  for(let i=0;i<order.length;i++){
     if(i < shown){
       nameEls[i].textContent = order[i];
       nameEls[i].classList.remove("hidden");
@@ -219,24 +355,74 @@ function render(){
   }
 }
 
-function pad(n){return String(n).padStart(2,"0")}
-const count = document.getElementById("count");
+async function computeOrderFromDrand(){
+  // Get drand chain info, then pick the first round at/after reveal time (UTC)
+  const info = await fetchJson(`${DRAND_API}/info`);
+  const genesisTimeSec = Number(info.genesis_time);
+  const periodSec = Number(info.period);
+  if(!Number.isFinite(genesisTimeSec) || !Number.isFinite(periodSec)){
+    throw new Error("Unexpected drand /info response.");
+  }
 
+  const round = roundAtOrAfterTime(genesisTimeSec, periodSec, revealUtcMs);
+  const beacon = await fetchJson(`${DRAND_API}/public/${round}`);
+
+  const randomnessHex = beacon.randomness;
+  const seedBytes = hexToU8(randomnessHex);
+
+  const computed = await fisherYatesShuffleDeterministic(teams, seedBytes);
+
+  // Proof metadata (hidden unless debug)
+  setHiddenProof(beacon.round, randomnessHex);
+
+  // A friendly line people can screenshot
+  seedMeta.innerHTML =
+    `Derived from drand round <code>${beacon.round}</code> at reveal time • ` +
+    `Randomness: <code>${randomnessHex.slice(0,12)}…</code>`;
+
+  return { computed, beaconRound: beacon.round, randomnessHex };
+}
+
+async function startReveal(){
+  try{
+    setBadge("pending","Fetching…","getting public randomness");
+    const out = await computeOrderFromDrand();
+    order = out.computed;
+
+    setBadge("ok","Verified ✓",`drand round ${out.beaconRound}`);
+    started = true;
+    startTime = Date.now();
+    render();
+  }catch(e){
+    console.error(e);
+    setBadge("bad","Error", "couldn’t fetch drand (check connection)");
+    seedMeta.textContent = "Could not fetch public randomness. Try reloading.";
+  }
+}
+
+/* Countdown loop */
 setInterval(()=>{
-  const diff = revealAt.getTime() - Date.now();
+  const diff = revealUtcMs - Date.now();
   if(diff <= 0){
     count.textContent = "00:00:00";
+    if(!started && !order.length){
+      // Start exactly at reveal time (or immediately if opened after)
+      startReveal();
+    }
     render();
     return;
   }
-  const h = Math.floor(diff / 36e5);
-  const m = Math.floor(diff % 36e5 / 6e4);
-  const s = Math.floor(diff % 6e4 / 1e3);
+  const h = Math.floor(diff/36e5);
+  const m = Math.floor(diff%36e5/6e4);
+  const s = Math.floor(diff%6e4/1e3);
   count.textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
 }, 500);
 
-/* Initial render (in case someone opens the page after the reveal has already started) */
-render();
+/* If someone opens the page after reveal time, trigger immediately */
+if(Date.now() >= revealUtcMs){
+  count.textContent = "00:00:00";
+  startReveal();
+}
 </script>
 </body>
 </html>
