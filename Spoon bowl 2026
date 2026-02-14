@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Spoon Bowl 2026 Draft</title>
+
+<style>
+:root{
+  --bgTop:#0a2416;
+  --bgMid:#0f3a22;
+  --bgBot:#145c34;
+  --card: rgba(255,255,255,.08);
+  --line: rgba(255,255,255,.10);
+  --shadow: 0 30px 80px rgba(0,0,0,.55);
+  --text: rgba(255,255,255,.92);
+  --muted: rgba(255,255,255,.72);
+  --accent: #7CFFB7;
+}
+
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  min-height:100vh;
+  font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial;
+  color: var(--text);
+  background:
+    radial-gradient(1200px 700px at 50% 0%, rgba(124,255,183,.18), transparent 60%),
+    radial-gradient(900px 500px at 50% 20%, rgba(255,255,255,.08), transparent 60%),
+    linear-gradient(180deg, var(--bgTop), var(--bgMid) 45%, var(--bgBot));
+  -webkit-user-select:none;
+  user-select:none;
+}
+
+.wrap{
+  max-width:980px;
+  margin:auto;
+  padding:22px 16px 60px;
+}
+
+.hero{
+  border-radius:24px;
+  overflow:hidden;
+  background:var(--card);
+  border:1px solid var(--line);
+  box-shadow:var(--shadow);
+}
+
+.hero img{width:100%;display:block}
+
+.heroText{
+  text-align:center;
+  padding:18px 16px 20px;
+  background:linear-gradient(180deg, rgba(0,0,0,.18), rgba(0,0,0,.35));
+}
+
+h1{
+  margin:0 0 8px;
+  font-size:clamp(28px,6vw,42px);
+  font-weight:950;
+  letter-spacing:.7px;
+}
+
+.sub{
+  margin:0 0 12px;
+  color:var(--muted);
+  font-weight:750;
+}
+
+.meta{
+  margin:18px auto 10px;
+  max-width:760px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+
+.metaBox{
+  padding:14px 12px;
+  border-radius:16px;
+  background:rgba(0,0,0,.25);
+  border:1px solid rgba(255,255,255,.10);
+  text-align:center;
+  font-weight:850;
+}
+
+.metaBox strong{
+  display:block;
+  font-size:20px;
+  margin-top:6px;
+  letter-spacing:.6px;
+  color:var(--accent);
+}
+
+.section{
+  text-align:center;
+  margin:22px 0 10px;
+  font-weight:950;
+  letter-spacing:.7px;
+  text-transform:uppercase;
+}
+
+.board{
+  max-width:860px;
+  margin:auto;
+  border-radius:20px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(0,0,0,.20);
+  box-shadow:0 20px 55px rgba(0,0,0,.45);
+}
+
+.row{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:14px 16px;
+  border-top:1px solid rgba(255,255,255,.08);
+  background:rgba(0,0,0,.18);
+  font-weight:850;
+}
+.row:first-child{border-top:none}
+
+.num{
+  width:44px;height:44px;
+  display:grid;place-items:center;
+  border-radius:12px;
+  background:rgba(124,255,183,.14);
+  border:1px solid rgba(124,255,183,.24);
+  color:var(--accent);
+  font-weight:950;
+}
+
+.name.hidden{opacity:.55}
+.name.reveal{opacity:1}
+
+.footer{
+  text-align:center;
+  margin-top:12px;
+  color:rgba(255,255,255,.60);
+  font-size:13px;
+}
+</style>
+</head>
+
+<body>
+<div class="wrap">
+
+  <div class="hero">
+    <img src="banner.jpg" alt="Spoon Bowl 2026">
+    <div class="heroText">
+      <h1>SPOON BOWL 2026 DRAFT</h1>
+      <p class="sub">Randomized draft order reveal</p>
+    </div>
+  </div>
+
+  <div class="meta">
+    <div class="metaBox">Reveal Time (AEST)<strong>Sunday 4:30 PM</strong></div>
+    <div class="metaBox">Countdown<strong id="count">--:--:--</strong></div>
+  </div>
+
+  <div class="section">Draft Order</div>
+  <div class="board" id="board"></div>
+
+  <div class="footer">Randomized draft order • Revealed one pick at a time</div>
+</div>
+
+<script>
+/* TEAM NAMES — PLAIN TEXT */
+const teams = [
+  "Hakuna Mata'utia",
+  "Spooners6",
+  "CSFC91",
+  "Schmidsgoat",
+  "SeaEaglesChamps2025",
+  "Nate’s Stars",
+  "Multiple Scoregasams",
+  "Strat",
+  "The Casualty Ward Deadbeats",
+  "irhysistable"
+];
+
+/* build board */
+const board=document.getElementById("board");
+const nameEls=[];
+for(let i=0;i<teams.length;i++){
+  const r=document.createElement("div");
+  r.className="row";
+  r.innerHTML=`<div class="num">${i+1}</div><div class="name hidden">Hidden</div>`;
+  board.appendChild(r);
+  nameEls.push(r.querySelector(".name"));
+}
+
+/* next Sunday 4:30pm */
+function nextSunday430(){
+  const x=new Date();
+  x.setSeconds(0,0);
+  x.setHours(16,30,0,0);
+  while(x.getDay()!==0) x.setDate(x.getDate()+1);
+  if(x.getTime()<Date.now()) x.setDate(x.getDate()+7);
+  return x;
+}
+const revealAt=nextSunday430();
+
+/* randomized order (stored so refresh doesn’t reroll) */
+const ORDER_KEY="sb26_order_final_plain";
+function shuffle(a){
+  for(let i=a.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+}
+function buildOrder(){
+  const saved=localStorage.getItem(ORDER_KEY);
+  if(saved){
+    try{
+      const p=JSON.parse(saved);
+      if(Array.isArray(p)&&p.length===teams.length) return p;
+    }catch(e){}
+  }
+  const copy=[...teams];
+  shuffle(copy);
+  localStorage.setItem(ORDER_KEY,JSON.stringify(copy));
+  return copy;
+}
+const order=buildOrder();
+
+/* reveal pacing */
+const INTERVAL=2000;
+const START_KEY="sb26_start_final_plain";
+function getStart(){return Number(localStorage.getItem(START_KEY)||0)}
+function setStart(t){localStorage.setItem(START_KEY,String(t))}
+
+function render(){
+  const start=getStart();
+  if(!start) return;
+  const shown=Math.min(order.length, Math.floor((Date.now()-start)/INTERVAL)+1);
+  for(let i=0;i<order.length;i++){
+    if(i<shown){
+      nameEls[i].textContent=order[i];
+      nameEls[i].classList.remove("hidden");
+      nameEls[i].classList.add("reveal");
+    }
+  }
+}
+
+function pad(n){return String(n).padStart(2,"0")}
+const count=document.getElementById("count");
+
+setInterval(()=>{
+  const diff=revealAt-Date.now();
+  if(diff<=0){
+    count.textContent="00:00:00";
+    if(!getStart()) setStart(Date.now());
+    render();
+    return;
+  }
+  const h=Math.floor(diff/36e5);
+  const m=Math.floor(diff%36e5/6e4);
+  const s=Math.floor(diff%6e4/1e3);
+  count.textContent=`${pad(h)}:${pad(m)}:${pad(s)}`;
+},500);
+</script>
+</body>
+</html>
