@@ -155,7 +155,7 @@ h1{
     <img src="banner.jpg" alt="Spoon Bowl 2026">
     <div class="heroText">
       <h1>SPOON BOWL 2026 DRAFT</h1>
-      <p class="sub">Provably-fair draft order • Revealed one pick at a time</p>
+      <p class="sub">Provably-fair randomized order • Revealed one pick at a time</p>
     </div>
   </div>
 
@@ -177,13 +177,13 @@ h1{
   <div class="section">Draft Order</div>
   <div class="board" id="board"></div>
 
-  <div class="footer">Order derived from public drand randomness at reveal time • Same result for everyone</div>
+  <div class="footer">Nothing reveals until 4:30pm Brisbane time • Order derived from public drand randomness</div>
   <div class="smallMeta" id="seedMeta"></div>
 
 </div>
 
 <script>
-/* ====== EDIT THESE ONLY ====== */
+/* ===================== EDIT THESE ONLY ===================== */
 const teams = [
   "Hakuna Mata'utia",
   "Spooners6",
@@ -202,14 +202,14 @@ const INTERVAL_MS = 2000;
 
 // Public randomness beacon endpoint (drand)
 const DRAND_API = "https://api.drand.sh";
-/* ============================ */
+/* =========================================================== */
 
 const debug = new URLSearchParams(location.search).get("debug") === "1";
 if(debug){
   document.getElementById("randomnessRow").style.display = "grid";
 }
 
-/* build board */
+/* build board (all hidden initially) */
 const board = document.getElementById("board");
 const nameEls = [];
 for(let i=0;i<teams.length;i++){
@@ -221,38 +221,35 @@ for(let i=0;i<teams.length;i++){
 }
 
 /* Fixed reveal time: next Sunday 4:30 PM Brisbane time (AEST UTC+10, no DST) */
-function nextSunday430Brisbane(){
+function nextSunday430BrisbaneUtcMs(){
   const now = new Date();
-  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
-  let bris = new Date(utcMs + 10 * 60 * 60000); // Brisbane time
+  // current UTC ms
+  const utcNowMs = now.getTime() + now.getTimezoneOffset() * 60000;
+  // Brisbane "wall clock" date object
+  const bris = new Date(utcNowMs + 10 * 60 * 60000);
 
+  // move to upcoming Sunday
   const day = bris.getDay(); // 0=Sun
   const daysUntilSunday = (7 - day) % 7;
   bris.setDate(bris.getDate() + daysUntilSunday);
+
+  // set to 16:30 Brisbane time
   bris.setHours(16,30,0,0);
 
-  // Convert Brisbane wall-clock back to an absolute UTC ms
-  const brisUtcMs = bris.getTime() - 10 * 60 * 60000;
+  // convert that Brisbane wall clock to absolute UTC ms
+  let revealUtcMs = bris.getTime() - 10 * 60 * 60000;
 
-  // If already passed, go to next Sunday
-  if(brisUtcMs <= Date.now()){
+  // if already passed, jump to next Sunday
+  if(revealUtcMs <= Date.now()){
     bris.setDate(bris.getDate() + 7);
+    revealUtcMs = bris.getTime() - 10 * 60 * 60000;
   }
-  return bris; // stored as "Brisbane clock", but Date has absolute ms under the hood
-}
-const revealAtBrisbane = nextSunday430Brisbane();
-
-/* Countdown: use absolute ms for the reveal moment */
-function revealAtUtcMs(){
-  // revealAtBrisbane is a Date object representing Brisbane wall-clock,
-  // but its internal time is already absolute.
-  // We created it from UTC->Brisbane conversion, then adjusted date/time on that,
-  // which keeps an absolute timestamp in the Date object.
-  return revealAtBrisbane.getTime() - 10 * 60 * 60000; // convert Brisbane clock to UTC ms
+  return revealUtcMs;
 }
 
-const revealUtcMs = revealAtUtcMs();
+const revealUtcMs = nextSunday430BrisbaneUtcMs();
 
+/* Countdown */
 function pad(n){return String(n).padStart(2,"0")}
 const count = document.getElementById("count");
 
@@ -298,7 +295,7 @@ async function fisherYatesShuffleDeterministic(inputArr, seedBytes){
 
   for(let i=a.length-1; i>0; i--){
     const max = 0xFFFFFFFF;
-    const limit = max - (max % (i+1)); // rejection sampling limit
+    const limit = max - (max % (i+1));
     let r;
     do { r = await nextUint32(); } while(r > limit);
     const j = r % (i+1);
@@ -317,7 +314,7 @@ function roundAtOrAfterTime(genesisTimeSec, periodSec, targetUtcMs){
   const targetSec = Math.floor(targetUtcMs/1000);
   if(targetSec <= genesisTimeSec) return 1;
   const offset = targetSec - genesisTimeSec;
-  return Math.floor((offset + periodSec - 1)/periodSec) + 1; // ceil
+  return Math.floor((offset + periodSec - 1)/periodSec) + 1;
 }
 
 /* ====== UI: badge + hidden proof ====== */
@@ -340,12 +337,22 @@ function setHiddenProof(round, randomnessHex){
 
 /* ====== Reveal flow ====== */
 let order = [];
-let startTime = 0;
 let started = false;
+let startTime = 0;
 
+/* IMPORTANT FIX:
+   Do not reveal ANYTHING before revealUtcMs. */
 function render(){
+  const now = Date.now();
+  if(now < revealUtcMs) return; // <-- hard stop before 4:30 Brisbane time
   if(!order.length || !started) return;
-  const shown = Math.min(order.length, Math.floor((Date.now()-startTime)/INTERVAL_MS)+1);
+
+  const elapsed = now - startTime;
+
+  // If you want first pick exactly AT 4:30:00, use +1
+  // If you want first pick at 4:30:02 (cleaner), remove +1.
+  const shown = Math.min(order.length, Math.floor(elapsed / INTERVAL_MS) + 1);
+
   for(let i=0;i<order.length;i++){
     if(i < shown){
       nameEls[i].textContent = order[i];
@@ -356,13 +363,9 @@ function render(){
 }
 
 async function computeOrderFromDrand(){
-  // Get drand chain info, then pick the first round at/after reveal time (UTC)
   const info = await fetchJson(`${DRAND_API}/info`);
   const genesisTimeSec = Number(info.genesis_time);
   const periodSec = Number(info.period);
-  if(!Number.isFinite(genesisTimeSec) || !Number.isFinite(periodSec)){
-    throw new Error("Unexpected drand /info response.");
-  }
 
   const round = roundAtOrAfterTime(genesisTimeSec, periodSec, revealUtcMs);
   const beacon = await fetchJson(`${DRAND_API}/public/${round}`);
@@ -372,15 +375,12 @@ async function computeOrderFromDrand(){
 
   const computed = await fisherYatesShuffleDeterministic(teams, seedBytes);
 
-  // Proof metadata (hidden unless debug)
   setHiddenProof(beacon.round, randomnessHex);
-
-  // A friendly line people can screenshot
   seedMeta.innerHTML =
-    `Derived from drand round <code>${beacon.round}</code> at reveal time • ` +
+    `Derived from drand round <code>${beacon.round}</code> • ` +
     `Randomness: <code>${randomnessHex.slice(0,12)}…</code>`;
 
-  return { computed, beaconRound: beacon.round, randomnessHex };
+  return { computed, round: beacon.round, randomnessHex };
 }
 
 async function startReveal(){
@@ -389,13 +389,13 @@ async function startReveal(){
     const out = await computeOrderFromDrand();
     order = out.computed;
 
-    setBadge("ok","Verified ✓",`drand round ${out.beaconRound}`);
+    setBadge("ok","Verified ✓",`drand round ${out.round}`);
     started = true;
-    startTime = Date.now();
+    startTime = revealUtcMs; // <-- anchor reveal schedule exactly at 4:30 Brisbane
     render();
   }catch(e){
     console.error(e);
-    setBadge("bad","Error", "couldn’t fetch drand (check connection)");
+    setBadge("bad","Error","couldn’t fetch drand");
     seedMeta.textContent = "Could not fetch public randomness. Try reloading.";
   }
 }
@@ -405,20 +405,19 @@ setInterval(()=>{
   const diff = revealUtcMs - Date.now();
   if(diff <= 0){
     count.textContent = "00:00:00";
-    if(!started && !order.length){
-      // Start exactly at reveal time (or immediately if opened after)
-      startReveal();
+    if(!started){
+      startReveal(); // starts only once at/after 4:30 Brisbane
     }
     render();
     return;
   }
-  const h = Math.floor(diff/36e5);
-  const m = Math.floor(diff%36e5/6e4);
-  const s = Math.floor(diff%6e4/1e3);
-  count.textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
+  const h=Math.floor(diff/36e5);
+  const m=Math.floor(diff%36e5/6e4);
+  const s=Math.floor(diff%6e4/1e3);
+  count.textContent=`${pad(h)}:${pad(m)}:${pad(s)}`;
 }, 500);
 
-/* If someone opens the page after reveal time, trigger immediately */
+/* If opened after reveal time, start immediately */
 if(Date.now() >= revealUtcMs){
   count.textContent = "00:00:00";
   startReveal();
