@@ -29,7 +29,6 @@ body{
     radial-gradient(1200px 700px at 50% 0%, rgba(124,255,183,.18), transparent 60%),
     radial-gradient(900px 500px at 50% 20%, rgba(255,255,255,.08), transparent 60%),
     linear-gradient(180deg, var(--bgTop), var(--bgMid) 45%, var(--bgBot));
-  -webkit-user-select:none;
   user-select:none;
 }
 
@@ -47,7 +46,10 @@ body{
   box-shadow:var(--shadow);
 }
 
-.hero img{width:100%;display:block}
+.hero img{
+  width:100%;
+  display:block;
+}
 
 .heroText{
   text-align:center;
@@ -63,40 +65,14 @@ h1{
 }
 
 .sub{
-  margin:0 0 12px;
+  margin:0;
   color:var(--muted);
   font-weight:750;
 }
 
-.meta{
-  margin:18px auto 10px;
-  max-width:900px;
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:12px;
-}
-
-.metaBox{
-  padding:14px 12px;
-  border-radius:16px;
-  background:rgba(0,0,0,.25);
-  border:1px solid rgba(255,255,255,.10);
-  text-align:center;
-  font-weight:850;
-}
-
-.metaBox strong{
-  display:block;
-  font-size:18px;
-  margin-top:6px;
-  letter-spacing:.4px;
-  color:var(--accent);
-  word-break:break-word;
-}
-
 .section{
   text-align:center;
-  margin:22px 0 10px;
+  margin:26px 0 12px;
   font-weight:950;
   letter-spacing:.7px;
   text-transform:uppercase;
@@ -138,28 +114,9 @@ h1{
 
 .footer{
   text-align:center;
-  margin-top:12px;
+  margin-top:14px;
   color:rgba(255,255,255,.60);
   font-size:13px;
-  line-height:1.35;
-}
-
-.small{
-  text-align:center;
-  margin-top:10px;
-  color:rgba(255,255,255,.70);
-  font-size:12px;
-  line-height:1.35;
-}
-a{color:var(--accent)}
-button{
-  margin-top:8px;
-  border:1px solid rgba(255,255,255,.18);
-  background:rgba(0,0,0,.30);
-  color:rgba(255,255,255,.92);
-  padding:8px 10px;
-  border-radius:10px;
-  font-weight:800;
 }
 </style>
 </head>
@@ -175,27 +132,18 @@ button{
     </div>
   </div>
 
-  <div class="meta">
-    <div class="metaBox">Reveal Time (Brisbane AEST)<strong id="revealLabel">Sunday 4:30 PM</strong></div>
-    <div class="metaBox">Countdown<strong id="count">--:--:--</strong></div>
-    <div class="metaBox">Randomness Proof (Drand Round)<strong id="proofRound">Pending</strong></div>
-    <div class="metaBox">Randomness Value<strong id="proofRand">Pending</strong></div>
-  </div>
-
   <div class="section">Draft Order</div>
   <div class="board" id="board"></div>
 
-  <div class="footer">Randomized draft order • Revealed one pick at a time (2s)</div>
-
-  <div class="small" id="proofText"></div>
-  <div class="small"><button id="copyBtn" type="button">Copy proof</button></div>
-
+  <div class="footer">
+    Randomized once • Locked • Revealed one pick at a time
+  </div>
 </div>
 
 <script>
-/* =========================
-   Teams (plain text)
-========================= */
+/* ===============================
+   TEAMS (PLAIN, TRANSPARENT)
+================================ */
 const TEAMS = [
   "Hakuna Mata'utia",
   "Spooners6",
@@ -209,247 +157,90 @@ const TEAMS = [
   "irhysistable"
 ];
 
-/* =========================
-   UI board
-========================= */
-const board = document.getElementById("board");
-const nameEls = [];
-for (let i=0;i<TEAMS.length;i++){
-  const r=document.createElement("div");
-  r.className="row";
-  r.innerHTML = `<div class="num">${i+1}</div><div class="name hidden">Hidden</div>`;
-  board.appendChild(r);
-  nameEls.push(r.querySelector(".name"));
-}
+/* ===============================
+   STORAGE KEYS
+================================ */
+const ORDER_KEY = "sb26_final_order";
+const START_KEY = "sb26_reveal_start";
 
-const countEl = document.getElementById("count");
-const proofRoundEl = document.getElementById("proofRound");
-const proofRandEl  = document.getElementById("proofRand");
-const proofTextEl  = document.getElementById("proofText");
-const copyBtn      = document.getElementById("copyBtn");
-
-/* =========================
-   Time: next Sunday 4:30pm Brisbane (AEST = UTC+10, no DST)
-   Everyone sees the same UTC timestamp.
-========================= */
-const AEST_OFFSET_MS = 10 * 60 * 60 * 1000;
-
-function nextSunday430_BrisbaneUTC(){
-  const nowUTC = Date.now();
-  const nowAEST = new Date(nowUTC + AEST_OFFSET_MS); // pretend local = AEST
-
-  // Build target in that "AEST view"
-  const targetAEST = new Date(nowAEST);
-  targetAEST.setSeconds(0,0);
-  targetAEST.setHours(16,30,0,0);
-
-  // Move to Sunday
-  while (targetAEST.getDay() !== 0) targetAEST.setDate(targetAEST.getDate()+1);
-
-  // If already passed in AEST, go next week
-  if (targetAEST.getTime() <= nowAEST.getTime()) targetAEST.setDate(targetAEST.getDate()+7);
-
-  // Convert back to UTC ms
-  return targetAEST.getTime() - AEST_OFFSET_MS;
-}
-
-const REVEAL_UTC = nextSunday430_BrisbaneUTC();
-
-/* =========================
-   Drand: compute a fixed round from reveal time
-   so everyone fetches the SAME round.
-========================= */
-const DRAND_INFO = "https://api.drand.sh/public/info";
-const DRAND_ROUND = (r) => `https://api.drand.sh/public/${r}`;
-
-async function fetchJSON(url){
-  const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok) throw new Error("fetch failed");
-  return res.json();
-}
-
-function computeRound(genesisTimeSec, periodSec, targetUnixSec){
-  // rounds are 1-indexed in drand
-  return Math.floor((targetUnixSec - genesisTimeSec) / periodSec) + 1;
-}
-
-async function getDrandProofForReveal(){
-  // cache in localStorage so refresh can't change proof
-  const k = "sb26_drand_proof_v1";
-  const saved = localStorage.getItem(k);
-  if (saved){
-    try{ return JSON.parse(saved); }catch(e){}
-  }
-
-  const info = await fetchJSON(DRAND_INFO);
-  const genesis = Number(info.genesis_time);   // seconds
-  const period  = Number(info.period);         // seconds
-  const targetRound = computeRound(genesis, period, Math.floor(REVEAL_UTC/1000));
-
-  // poll until the target round exists (after reveal time it will appear)
-  while(true){
-    try{
-      const p = await fetchJSON(DRAND_ROUND(targetRound));
-      const proof = { round: p.round, randomness: p.randomness };
-      localStorage.setItem(k, JSON.stringify(proof));
-      return proof;
-    }catch(e){
-      // If not ready yet, wait a bit and try again
-      await new Promise(r => setTimeout(r, 1500));
-    }
+/* ===============================
+   RANDOM SHUFFLE (FAIR)
+================================ */
+function shuffle(arr){
+  for(let i=arr.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]] = [arr[j],arr[i]];
   }
 }
 
-/* =========================
-   Deterministic shuffle from a seed string
-========================= */
-function xmur3(str){
-  let h = 1779033703 ^ str.length;
-  for (let i=0;i<str.length;i++){
-    h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
-    h = (h << 13) | (h >>> 19);
-  }
-  return function(){
-    h = Math.imul(h ^ (h >>> 16), 2246822507);
-    h = Math.imul(h ^ (h >>> 13), 3266489909);
-    return (h ^= h >>> 16) >>> 0;
-  }
-}
-function mulberry32(a){
-  return function(){
-    let t = a += 0x6D2B79F5;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  }
-}
-function shuffleSeeded(arr, seedStr){
-  const seedFn = xmur3(seedStr);
-  const rnd = mulberry32(seedFn());
-  const a = arr.slice();
-  for (let i=a.length-1;i>0;i--){
-    const j = Math.floor(rnd()*(i+1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
-/* =========================
-   Lock order globally (deterministic) + lock locally (no reroll on refresh)
-========================= */
-const ORDER_KEY = "sb26_order_provable_v1";
-const START_KEY = "sb26_start_provable_v1";
-
-function getStart(){
-  const v = Number(localStorage.getItem(START_KEY) || 0);
-  return v > 0 ? v : null;
-}
-function setStart(ts){
-  localStorage.setItem(START_KEY, String(ts));
-}
-
-function getOrder(){
+/* ===============================
+   BUILD OR LOAD FINAL ORDER
+================================ */
+function getFinalOrder(){
   const saved = localStorage.getItem(ORDER_KEY);
   if(saved){
     try{
-      const p = JSON.parse(saved);
-      if(Array.isArray(p) && p.length === TEAMS.length) return p;
+      const parsed = JSON.parse(saved);
+      if(Array.isArray(parsed) && parsed.length === TEAMS.length){
+        return parsed;
+      }
     }catch(e){}
   }
-  return null;
+  const fresh = [...TEAMS];
+  shuffle(fresh);
+  localStorage.setItem(ORDER_KEY, JSON.stringify(fresh));
+  return fresh;
 }
-function setOrder(o){
-  localStorage.setItem(ORDER_KEY, JSON.stringify(o));
+
+const FINAL_ORDER = getFinalOrder();
+
+/* ===============================
+   BUILD BOARD UI
+================================ */
+const board = document.getElementById("board");
+const nameEls = [];
+
+FINAL_ORDER.forEach((_, i)=>{
+  const row = document.createElement("div");
+  row.className = "row";
+  row.innerHTML = `
+    <div class="num">${i+1}</div>
+    <div class="name hidden">Hidden</div>
+  `;
+  board.appendChild(row);
+  nameEls.push(row.querySelector(".name"));
+});
+
+/* ===============================
+   REVEAL LOGIC (LOCKED)
+================================ */
+const INTERVAL = 2000;
+
+function startReveal(){
+  if(!localStorage.getItem(START_KEY)){
+    localStorage.setItem(START_KEY, Date.now());
+  }
 }
 
-/* =========================
-   Countdown + reveal
-========================= */
-const INTERVAL_MS = 2000;
-
-function pad(n){ return String(n).padStart(2,"0"); }
-
-function render(order){
-  const start = getStart();
+function render(){
+  const start = Number(localStorage.getItem(START_KEY));
   if(!start) return;
 
-  const shown = Math.min(order.length, Math.floor((Date.now() - start)/INTERVAL_MS) + 1);
+  const shown = Math.min(
+    FINAL_ORDER.length,
+    Math.floor((Date.now() - start) / INTERVAL) + 1
+  );
 
-  for(let i=0;i<order.length;i++){
-    if(i < shown){
-      nameEls[i].textContent = order[i];
-      nameEls[i].classList.remove("hidden");
-      nameEls[i].classList.add("reveal");
-    }
+  for(let i=0;i<shown;i++){
+    nameEls[i].textContent = FINAL_ORDER[i];
+    nameEls[i].classList.remove("hidden");
+    nameEls[i].classList.add("reveal");
   }
 }
 
-async function startIfNeeded(){
-  // If order already locked, just render
-  const existing = getOrder();
-  if(existing){
-    render(existing);
-    return;
-  }
-
-  // Fetch public proof, then create deterministic order
-  const proof = await getDrandProofForReveal();
-  proofRoundEl.textContent = String(proof.round);
-  proofRandEl.textContent  = proof.randomness;
-
-  // Seed: fixed reveal time + proof fields + teams list (so any mismatch is obvious)
-  const seed = `${REVEAL_UTC}|${proof.round}|${proof.randomness}|${TEAMS.join("|")}`;
-  const order = shuffleSeeded(TEAMS, seed);
-
-  setOrder(order);
-  render(order);
-
-  // Proof text for mates
-  proofTextEl.innerHTML =
-    `Proof URL: <a href="https://api.drand.sh/public/${proof.round}" target="_blank" rel="noopener">api.drand.sh/public/${proof.round}</a><br>` +
-    `Seed = REVEAL_UTC + round + randomness + team list (deterministic shuffle)`;
-}
-
-function tick(){
-  const diff = REVEAL_UTC - Date.now();
-  if(diff <= 0){
-    countEl.textContent = "00:00:00";
-    if(!getStart()) setStart(Date.now());
-    startIfNeeded();
-    return;
-  }
-
-  const h = Math.floor(diff/36e5);
-  const m = Math.floor((diff%36e5)/6e4);
-  const s = Math.floor((diff%6e4)/1e3);
-  countEl.textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
-
-  // If someone refreshed after reveal started, keep it going
-  const existing = getOrder();
-  if(existing) render(existing);
-}
-
-setInterval(tick, 500);
-tick();
-
-/* Copy proof button */
-copyBtn.addEventListener("click", async () => {
-  const proof = localStorage.getItem("sb26_drand_proof_v1");
-  const order = localStorage.getItem(ORDER_KEY);
-  const msg =
-`Spoon Bowl 2026 Draft – Random Proof
-Reveal UTC: ${REVEAL_UTC}
-Drand proof: ${proof || "pending"}
-Proof URL: https://api.drand.sh/public/(round shown on page)
-Order (locked): ${order || "pending"}`;
-  try{
-    await navigator.clipboard.writeText(msg);
-    copyBtn.textContent = "Copied!";
-    setTimeout(()=>copyBtn.textContent="Copy proof", 1200);
-  }catch(e){
-    alert("Couldn’t copy automatically — select and copy from the Proof section.");
-  }
-});
+/* Auto-start reveal once page loads */
+startReveal();
+setInterval(render, 500);
 </script>
 </body>
 </html>
