@@ -46,10 +46,7 @@ body{
   box-shadow:var(--shadow);
 }
 
-.hero img{
-  width:100%;
-  display:block;
-}
+.hero img{width:100%;display:block}
 
 .heroText{
   text-align:center;
@@ -136,13 +133,13 @@ h1{
   <div class="board" id="board"></div>
 
   <div class="footer">
-    Randomized once • Locked • Revealed one pick at a time
+    Reveal begins Sunday 4:30pm (AEST) • One pick every 2 seconds
   </div>
 </div>
 
 <script>
 /* ===============================
-   TEAMS (PLAIN, TRANSPARENT)
+   CONFIG
 ================================ */
 const TEAMS = [
   "Hakuna Mata'utia",
@@ -157,14 +154,39 @@ const TEAMS = [
   "irhysistable"
 ];
 
-/* ===============================
-   STORAGE KEYS
-================================ */
 const ORDER_KEY = "sb26_final_order";
 const START_KEY = "sb26_reveal_start";
+const INTERVAL = 2000;
 
 /* ===============================
-   RANDOM SHUFFLE (FAIR)
+   NEXT SUNDAY 4:30PM AEST
+================================ */
+function nextSunday430AEST(){
+  const now = new Date();
+
+  // Convert now → AEST (UTC+10)
+  const aestNow = new Date(now.getTime() + (10 * 60 * 60 * 1000));
+
+  const target = new Date(aestNow);
+  target.setSeconds(0,0);
+  target.setHours(16,30,0,0);
+
+  while(target.getDay() !== 0){
+    target.setDate(target.getDate() + 1);
+  }
+
+  if(target <= aestNow){
+    target.setDate(target.getDate() + 7);
+  }
+
+  // Convert back to local time
+  return new Date(target.getTime() - (10 * 60 * 60 * 1000));
+}
+
+const REVEAL_TIME = nextSunday430AEST();
+
+/* ===============================
+   SHUFFLE (FAIR)
 ================================ */
 function shuffle(arr){
   for(let i=arr.length-1;i>0;i--){
@@ -174,7 +196,7 @@ function shuffle(arr){
 }
 
 /* ===============================
-   BUILD OR LOAD FINAL ORDER
+   GET OR CREATE ORDER (LOCKED)
 ================================ */
 function getFinalOrder(){
   const saved = localStorage.getItem(ORDER_KEY);
@@ -195,7 +217,7 @@ function getFinalOrder(){
 const FINAL_ORDER = getFinalOrder();
 
 /* ===============================
-   BUILD BOARD UI
+   BUILD BOARD
 ================================ */
 const board = document.getElementById("board");
 const nameEls = [];
@@ -212,17 +234,19 @@ FINAL_ORDER.forEach((_, i)=>{
 });
 
 /* ===============================
-   REVEAL LOGIC (LOCKED)
+   REVEAL CONTROL
 ================================ */
-const INTERVAL = 2000;
-
-function startReveal(){
-  if(!localStorage.getItem(START_KEY)){
-    localStorage.setItem(START_KEY, Date.now());
+function maybeStartReveal(){
+  if(Date.now() >= REVEAL_TIME.getTime()){
+    if(!localStorage.getItem(START_KEY)){
+      localStorage.setItem(START_KEY, Date.now());
+    }
   }
 }
 
 function render(){
+  maybeStartReveal();
+
   const start = Number(localStorage.getItem(START_KEY));
   if(!start) return;
 
@@ -238,8 +262,6 @@ function render(){
   }
 }
 
-/* Auto-start reveal once page loads */
-startReveal();
 setInterval(render, 500);
 </script>
 </body>
