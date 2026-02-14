@@ -163,82 +163,56 @@ h1{
   <div class="section">Draft Order</div>
   <div class="board" id="board"></div>
 
-  <div class="footer">Randomized draft order • Revealed one pick at a time</div>
+  <div class="footer">Randomized draft order • Revealed one pick at a time • Same order for everyone</div>
 </div>
 
 <script>
-/* TEAM NAMES — PLAIN TEXT */
-const teams = [
-  "Hakuna Mata'utia",
-  "Spooners6",
-  "CSFC91",
-  "Schmidsgoat",
-  "SeaEaglesChamps2025",
-  "Nate’s Stars",
+/* FIXED SHARED DRAFT ORDER (generated once with a fixed seed) */
+/* Every visitor and every refresh now sees exactly this order */
+const order = [
   "Multiple Scoregasams",
+  "Schmidsgoat",
+  "Hakuna Mata'utia",
+  "irhysistable",
   "Strat",
   "The Casualty Ward Deadbeats",
-  "irhysistable"
+  "SeaEaglesChamps2025",
+  "CSFC91",
+  "Nate’s Stars",
+  "Spooners6"
 ];
 
 /* build board */
-const board=document.getElementById("board");
-const nameEls=[];
-for(let i=0;i<teams.length;i++){
-  const r=document.createElement("div");
-  r.className="row";
-  r.innerHTML=`<div class="num">${i+1}</div><div class="name hidden">Hidden</div>`;
+const board = document.getElementById("board");
+const nameEls = [];
+for(let i = 0; i < order.length; i++){
+  const r = document.createElement("div");
+  r.className = "row";
+  r.innerHTML = `<div class="num">${i+1}</div><div class="name hidden">Hidden</div>`;
   board.appendChild(r);
   nameEls.push(r.querySelector(".name"));
 }
 
-/* next Sunday 4:30pm */
+/* next Sunday 4:30pm AEST */
 function nextSunday430(){
-  const x=new Date();
+  const x = new Date();
   x.setSeconds(0,0);
   x.setHours(16,30,0,0);
-  while(x.getDay()!==0) x.setDate(x.getDate()+1);
-  if(x.getTime()<Date.now()) x.setDate(x.getDate()+7);
+  while(x.getDay() !== 0) x.setDate(x.getDate()+1);
+  if(x.getTime() < Date.now()) x.setDate(x.getDate()+7);
   return x;
 }
-const revealAt=nextSunday430();
-
-/* randomized order (stored so refresh doesn’t reroll) */
-const ORDER_KEY="sb26_order_final_plain";
-function shuffle(a){
-  for(let i=a.length-1;i>0;i--){
-    const j=Math.floor(Math.random()*(i+1));
-    [a[i],a[j]]=[a[j],a[i]];
-  }
-}
-function buildOrder(){
-  const saved=localStorage.getItem(ORDER_KEY);
-  if(saved){
-    try{
-      const p=JSON.parse(saved);
-      if(Array.isArray(p)&&p.length===teams.length) return p;
-    }catch(e){}
-  }
-  const copy=[...teams];
-  shuffle(copy);
-  localStorage.setItem(ORDER_KEY,JSON.stringify(copy));
-  return copy;
-}
-const order=buildOrder();
+const revealAt = nextSunday430();
 
 /* reveal pacing */
-const INTERVAL=2000;
-const START_KEY="sb26_start_final_plain";
-function getStart(){return Number(localStorage.getItem(START_KEY)||0)}
-function setStart(t){localStorage.setItem(START_KEY,String(t))}
+const INTERVAL = 2000;
 
 function render(){
-  const start=getStart();
-  if(!start) return;
-  const shown=Math.min(order.length, Math.floor((Date.now()-start)/INTERVAL)+1);
-  for(let i=0;i<order.length;i++){
-    if(i<shown){
-      nameEls[i].textContent=order[i];
+  const elapsed = Math.max(0, Date.now() - revealAt.getTime());
+  const shown = Math.min(order.length, Math.floor(elapsed / INTERVAL) + 1);
+  for(let i = 0; i < order.length; i++){
+    if(i < shown){
+      nameEls[i].textContent = order[i];
       nameEls[i].classList.remove("hidden");
       nameEls[i].classList.add("reveal");
     }
@@ -246,21 +220,23 @@ function render(){
 }
 
 function pad(n){return String(n).padStart(2,"0")}
-const count=document.getElementById("count");
+const count = document.getElementById("count");
 
 setInterval(()=>{
-  const diff=revealAt-Date.now();
-  if(diff<=0){
-    count.textContent="00:00:00";
-    if(!getStart()) setStart(Date.now());
+  const diff = revealAt.getTime() - Date.now();
+  if(diff <= 0){
+    count.textContent = "00:00:00";
     render();
     return;
   }
-  const h=Math.floor(diff/36e5);
-  const m=Math.floor(diff%36e5/6e4);
-  const s=Math.floor(diff%6e4/1e3);
-  count.textContent=`${pad(h)}:${pad(m)}:${pad(s)}`;
-},500);
+  const h = Math.floor(diff / 36e5);
+  const m = Math.floor(diff % 36e5 / 6e4);
+  const s = Math.floor(diff % 6e4 / 1e3);
+  count.textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
+}, 500);
+
+/* Initial render (in case someone opens the page after the reveal has already started) */
+render();
 </script>
 </body>
 </html>
